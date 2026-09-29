@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Auth UI | Ebad Ahmed</title>
+<style>
+:root{box-sizing:border-box;
+--bg:#07070c;--fg:#f2f3f8;--muted:#9aa0b8;--card:rgba(255,255,255,.045);--line:rgba(255,255,255,.12);
+--n1:#00f0ff;--n2:#b84bff;--n3:#ff2ec6}
+*,*:before,*:after{box-sizing:inherit}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;padding:20px}
+body::before{content:"";position:fixed;inset:0;z-index:-1;background:
+radial-gradient(circle at 15% 20%,rgba(0,240,255,.14),transparent 40%),
+radial-gradient(circle at 85% 15%,rgba(184,75,255,.14),transparent 40%),
+radial-gradient(circle at 50% 90%,rgba(255,46,198,.10),transparent 45%)}
+.stage{position:relative;width:min(820px,94vw);min-height:520px;border-radius:26px;overflow:hidden;
+background:var(--card);border:1px solid var(--line);backdrop-filter:blur(16px);box-shadow:0 30px 80px rgba(0,0,0,.5)}
+
+/* Forms container */
+.forms{position:absolute;inset:0;display:flex}
+.form-panel{flex:0 0 50%;display:flex;align-items:center;justify-content:center;padding:50px 44px;transition:opacity .5s ease, transform .5s ease}
+.form-panel form{width:100%;max-width:320px}
+h2{font-size:1.6rem;margin:0 0 6px}
+h2 span{background:linear-gradient(90deg,var(--n1),var(--n2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--muted);font-size:.88rem;margin:0 0 26px}
+label{display:block;font-size:.82rem;color:var(--muted);margin:0 0 6px}
+.field{margin-bottom:16px;position:relative}
+input{width:100%;font:inherit;color:var(--fg);background:rgba(255,255,255,.03);border:1px solid var(--line);
+border-radius:12px;padding:12px 14px;transition:border-color .2s,box-shadow .2s}
+input:focus{outline:none;border-color:var(--n1);box-shadow:0 0 0 3px rgba(0,240,255,.15)}
+.field.err input{border-color:var(--n3);box-shadow:0 0 0 3px rgba(255,46,198,.15)}
+.errmsg{color:var(--n3);font-size:.76rem;margin-top:5px;min-height:1em}
+.submit{width:100%;margin-top:10px;padding:13px;border:none;border-radius:12px;font:inherit;font-weight:700;
+cursor:pointer;background:linear-gradient(90deg,var(--n1),var(--n2));color:#05050a;box-shadow:0 0 20px rgba(0,240,255,.25);
+transition:transform .2s}
+.submit:hover{transform:translateY(-2px)}
+.switch-line{margin-top:18px;font-size:.85rem;color:var(--muted);text-align:center}
+.switch-line button{background:none;border:none;color:var(--n1);font:inherit;font-weight:700;cursor:pointer;padding:0}
+.strength{height:4px;border-radius:99px;background:var(--line);margin-top:8px;overflow:hidden}
+.strength i{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--n3),var(--n2),var(--n1));transition:width .3s ease}
+
+/* Sliding overlay panel */
+.overlay{position:absolute;top:0;left:50%;width:50%;height:100%;
+background:linear-gradient(160deg,var(--n1),var(--n2) 55%,var(--n3));
+color:#05050a;display:flex;align-items:center;justify-content:center;text-align:center;padding:50px 40px;
+transition:transform .6s cubic-bezier(.65,0,.35,1), border-radius .6s ease;
+z-index:5;overflow:hidden}
+.overlay:before{content:"";position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.35) 1px,transparent 1px);
+background-size:22px 22px;opacity:.25}
+.overlay-inner{position:relative;z-index:1}
+.overlay h3{font-size:1.6rem;margin:0 0 10px}
+.overlay p{margin:0 0 24px;color:rgba(5,5,10,.75);font-size:.9rem;max-width:260px}
+.ghost-btn{padding:11px 30px;border:2px solid #05050a;border-radius:999px;background:transparent;color:#05050a;
+font-weight:700;font:inherit;cursor:pointer;transition:transform .2s,background .2s,color .2s}
+.ghost-btn:hover{background:#05050a;color:var(--n1);transform:translateY(-2px)}
+
+/* mode: signin (default) -> overlay on RIGHT, login form visible on left, signup form hidden on right */
+.stage[data-mode="signin"] .overlay{transform:translateX(0);border-radius:120px 0 0 120px}
+.stage[data-mode="signin"] #panel-signin{transform:translateX(0);opacity:1}
+.stage[data-mode="signin"] #panel-signup{transform:translateX(30px);opacity:0;pointer-events:none}
+
+/* mode: signup -> overlay slides to LEFT, signup form visible on right */
+.stage[data-mode="signup"] .overlay{transform:translateX(-100%);border-radius:0 120px 120px 0}
+.stage[data-mode="signup"] #panel-signup{transform:translateX(0);opacity:1}
+.stage[data-mode="signup"] #panel-signin{transform:translateX(-30px);opacity:0;pointer-events:none}
+
+@media (max-width:720px){
+  .stage{min-height:auto}
+  .forms{position:relative;flex-direction:column}
+  .form-panel{flex:0 0 100%;padding:36px 24px}
+  .overlay{display:none}
+  #panel-signin,#panel-signup{position:relative;transform:none!important;opacity:1!important;pointer-events:auto!important}
+  .stage[data-mode="signin"] #panel-signup,.stage[data-mode="signup"] #panel-signin{display:none}
+}
+</style>
+</head>
+<body>
+<div class="stage" id="stage" data-mode="signin">
+  <div class="forms">
+    <div class="form-panel" id="panel-signin" style="position:absolute;left:0;top:0;width:50%;height:100%">
+      <form id="loginForm" novalidate>
+        <h2>Welcome <span>back</span></h2>
+        <p class="sub">Sign in to continue to your account.</p>
+        <div class="field" id="li-email-field">
+          <label for="li-email">Email</label>
+          <input id="li-email" type="email" placeholder="you@example.com" autocomplete="email">
+          <p class="errmsg"></p>
+        </div>
+        <div class="field" id="li-pass-field">
+          <label for="li-pass">Password</label>
+          <input id="li-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+          <p class="errmsg"></p>
+        </div>
+        <button class="submit" type="submit">Sign In</button>
+        <p class="switch-line">Don't have an account? <button type="button" data-go="signup">Sign up</button></p>
+      </form>
+    </div>
+
+    <div class="form-panel" id="panel-signup" style="position:absolute;right:0;top:0;width:50%;height:100%">
+      <form id="signupForm" novalidate>
+        <h2>Create <span>account</span></h2>
+        <p class="sub">Join in a few seconds — it's free.</p>
+        <div class="field" id="su-name-field">
+          <label for="su-name">Full name</label>
+          <input id="su-name" type="text" placeholder="Ebad Ahmed" autocomplete="name">
+          <p class="errmsg"></p>
+        </div>
+        <div class="field" id="su-email-field">
+          <label for="su-email">Email</label>
+          <input id="su-email" type="email" placeholder="you@example.com" autocomplete="email">
+          <p class="errmsg"></p>
+        </div>
+        <div class="field" id="su-pass-field">
+          <label for="su-pass">Password</label>
+          <input id="su-pass" type="password" placeholder="At least 8 characters" autocomplete="new-password">
+          <div class="strength"><i id="strengthbar"></i></div>
+          <p class="errmsg"></p>
+        </div>
+        <button class="submit" type="submit">Create Account</button>
+        <p class="switch-line">Already have an account? <button type="button" data-go="signin">Sign in</button></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="overlay">
+    <div class="overlay-inner" id="overlayContent">
+      <h3>New here?</h3>
+      <p>Create an account and start exploring everything we have to offer.</p>
+      <button class="ghost-btn" data-go="signup">Sign Up</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var stage = document.getElementById('stage');
+var overlayContent = document.getElementById('overlayContent');
+
+var COPY = {
+  signin: { h:"New here?", p:"Create an account and start exploring everything we have to offer.", btn:"Sign Up", go:"signup" },
+  signup: { h:"Already a member?", p:"Sign in to pick up right where you left off.", btn:"Sign In", go:"signin" }
+};
+
+function setMode(mode){
+  stage.setAttribute('data-mode', mode);
+  var c = COPY[mode];
+  overlayContent.innerHTML = '<h3>'+c.h+'</h3><p>'+c.p+'</p><button class="ghost-btn" data-go="'+c.go+'">'+c.btn+'</button>';
+}
+
+document.addEventListener('click', function(e){
+  var t = e.target.closest('[data-go]');
+  if(t){ setMode(t.dataset.go); }
+});
+
+function showError(fieldId, msg){
+  var f = document.getElementById(fieldId);
+  f.classList.add('err');
+  f.querySelector('.errmsg').textContent = msg;
+}
+function clearError(fieldId){
+  var f = document.getElementById(fieldId);
+  f.classList.remove('err');
+  f.querySelector('.errmsg').textContent = '';
+}
+function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+document.getElementById('loginForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var ok = true;
+  var email = document.getElementById('li-email').value.trim();
+  var pass = document.getElementById('li-pass').value;
+  clearError('li-email-field'); clearError('li-pass-field');
+  if(!validEmail(email)){ showError('li-email-field','Enter a valid email address'); ok=false; }
+  if(pass.length < 1){ showError('li-pass-field','Password is required'); ok=false; }
+  if(ok){ alert('Signed in (demo only — no backend connected).'); }
+});
+
+document.getElementById('su-pass').addEventListener('input', function(){
+  var v = this.value;
+  var score = 0;
+  if(v.length >= 8) score += 34;
+  if(/[A-Z]/.test(v) && /[a-z]/.test(v)) score += 33;
+  if(/[0-9]/.test(v) || /[^A-Za-z0-9]/.test(v)) score += 33;
+  document.getElementById('strengthbar').style.width = Math.min(score,100) + '%';
+});
+
+document.getElementById('signupForm').addEventListener('submit', function(ev){
+  ev.preventDefault();
+  var ok = true;
+  var name = document.getElementById('su-name').value.trim();
+  var email = document.getElementById('su-email').value.trim();
+  var pass = document.getElementById('su-pass').value;
+  clearError('su-name-field'); clearError('su-email-field'); clearError('su-pass-field');
+  if(name.length < 2){ showError('su-name-field','Enter your full name'); ok=false; }
+  if(!validEmail(email)){ showError('su-email-field','Enter a valid email address'); ok=false; }
+  if(pass.length < 8){ showError('su-pass-field','Password must be at least 8 characters'); ok=false; }
+  if(ok){ alert('Account created (demo only — no backend connected).'); }
+});
+</script>
+</body>
+</html>
